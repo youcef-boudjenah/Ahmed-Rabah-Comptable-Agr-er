@@ -1,0 +1,12 @@
+/vendor/
+/node_modules/
+/storage/uploads/*
+/storage/clients/*
+/storage/generated/*
+!/storage/clients/.gitkeep
+!/storage/uploads/.gitkeep
+!/storage/templates/.gitkeep
+.env
+.netlify/
+*.log
+.DS_Store
