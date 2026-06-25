@@ -54,7 +54,7 @@ final class AdminController
             AdminRepository::updateCabinetName(trim($_POST['cabinet_name']));
         }
 
-        View::flash('success', 'Paramètres enregistrés.');
+        View::flashT('success', 'flash.admin_settings_saved');
         View::redirect('/admin?tab=settings');
     }
 
@@ -67,18 +67,18 @@ final class AdminController
         $role = in_array($_POST['role'] ?? '', ['admin', 'collaborateur'], true) ? $_POST['role'] : 'collaborateur';
 
         if ($name === '' || $email === '' || strlen($password) < 6) {
-            View::flash('error', 'Nom, email et mot de passe (6+ car.) requis.');
+            View::flashT('error', 'flash.admin_user_fields');
             View::redirect('/admin?tab=users');
         }
 
         $exists = Database::fetchOne('SELECT id FROM users WHERE email = ?', [$email]);
         if ($exists) {
-            View::flash('error', 'Email déjà utilisé.');
+            View::flashT('error', 'flash.admin_email_taken');
             View::redirect('/admin?tab=users');
         }
 
         AdminRepository::createUser($name, $email, $password, $role);
-        View::flash('success', 'Utilisateur créé.');
+        View::flashT('success', 'flash.admin_user_created');
         View::redirect('/admin?tab=users');
     }
 
@@ -86,7 +86,7 @@ final class AdminController
     {
         Auth::requireAdmin();
         if ($id === Auth::id() && ($_POST['role'] ?? '') !== 'admin') {
-            View::flash('error', 'Vous ne pouvez pas retirer votre propre rôle admin.');
+            View::flashT('error', 'flash.admin_cannot_demote');
             View::redirect('/admin?tab=users');
         }
         AdminRepository::updateUser(
@@ -95,7 +95,7 @@ final class AdminController
             in_array($_POST['role'] ?? '', ['admin', 'collaborateur'], true) ? $_POST['role'] : 'collaborateur',
             $_POST['password'] ?? null
         );
-        View::flash('success', 'Utilisateur mis à jour.');
+        View::flashT('success', 'flash.admin_user_updated');
         View::redirect('/admin?tab=users');
     }
 
@@ -111,7 +111,7 @@ final class AdminController
             'valid_from' => $_POST['valid_from'] ?? date('Y-m-d'),
             'valid_to' => $_POST['valid_to'] ?? '',
         ]);
-        View::flash('success', 'Taux ajouté.');
+        View::flashT('success', 'flash.admin_rate_added');
         View::redirect('/admin?tab=rates');
     }
 
@@ -127,7 +127,7 @@ final class AdminController
             'valid_from' => $_POST['valid_from'] ?? date('Y-m-d'),
             'valid_to' => $_POST['valid_to'] ?? '',
         ]);
-        View::flash('success', 'Taux mis à jour.');
+        View::flashT('success', 'flash.admin_rate_updated');
         View::redirect('/admin?tab=rates');
     }
 
@@ -140,7 +140,7 @@ final class AdminController
             $_POST['due_month'] !== '' ? (int) $_POST['due_month'] : null,
             trim($_POST['label_fr'] ?? '')
         );
-        View::flash('success', 'Échéance mise à jour.');
+        View::flashT('success', 'flash.admin_deadline_updated');
         View::redirect('/admin?tab=deadlines');
     }
 
@@ -149,7 +149,7 @@ final class AdminController
         Auth::requireAdmin();
         $active = isset($_POST['is_active']);
         AdminRepository::toggleAutomationRule($id, $active);
-        View::flash('success', 'Règle mise à jour.');
+        View::flashT('success', 'flash.admin_rule_updated');
         View::redirect('/admin?tab=automation');
     }
 }

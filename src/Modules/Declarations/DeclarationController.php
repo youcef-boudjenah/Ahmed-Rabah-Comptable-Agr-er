@@ -34,7 +34,7 @@ final class DeclarationController
         }
 
         View::render('declarations/index', [
-            'title' => 'Déclarations',
+            'title' => __('nav.declarations'),
             'declarations' => $declarations,
             'kanban' => $kanban,
             'filterStatus' => $status,
@@ -50,7 +50,7 @@ final class DeclarationController
             View::redirect('/declarations');
         }
         View::render('declarations/show', [
-            'title' => 'Revue déclaration',
+            'title' => __('declarations.review_title'),
             'declaration' => $declaration,
             'source' => DeclarationRepository::sourceData($id),
             'previous' => DeclarationRepository::previousPeriod($declaration),
@@ -65,6 +65,7 @@ final class DeclarationController
             'canSubmit' => Auth::canSubmit(),
             'nextStep' => WorkflowService::nextStep($declaration),
             'gedDocs' => WorkflowService::documentsForDeclaration($id),
+            'bordereauMeta' => self::bordereauMeta($declaration),
         ]);
     }
 
@@ -90,7 +91,7 @@ final class DeclarationController
         }
 
         DeclarationRepository::updateComputed($id, $computed);
-        View::flash('success', 'Brouillon mis à jour.');
+        View::flashT('success', 'flash.declaration_draft_updated');
         View::redirect('/declarations/' . $id);
     }
 
@@ -98,7 +99,7 @@ final class DeclarationController
     {
         Auth::requireAuth();
         if (!Auth::canApprove()) {
-            View::flash('error', 'Vous n\'avez pas la permission d\'approuver.');
+            View::flashT('error', 'flash.declaration_approve_denied');
             View::redirect('/declarations/' . $id);
         }
         DeclarationRepository::approve($id);
@@ -106,8 +107,8 @@ final class DeclarationController
             PdfGenerationService::generate($id);
         }
         View::flash('success', SettingsService::bool('auto_pdf_on_approve')
-            ? 'Déclaration approuvée. Bordereau généré et archivé dans le GED.'
-            : 'Déclaration approuvée.');
+            ? __('flash.declaration_approved_pdf')
+            : __('flash.declaration_approved'));
         View::redirect('/declarations/' . $id);
     }
 
@@ -115,7 +116,7 @@ final class DeclarationController
     {
         Auth::requireAuth();
         if (!Auth::canSubmit()) {
-            View::flash('error', 'Dépôt réservé aux administrateurs.');
+            View::flashT('error', 'flash.declaration_submit_admin');
             View::redirect('/declarations/' . $id);
         }
         $checklist = [
@@ -144,7 +145,7 @@ final class DeclarationController
         if ($decl && !empty($decl['generated_pdf_path']) && is_file($decl['generated_pdf_path'])) {
             WorkflowService::onBordereauGenerated($id, $decl['generated_pdf_path']);
         }
-        View::flash('success', 'Déclaration déposée. Quittance et bordereau archivés dans le dossier client.');
+        View::flashT('success', 'flash.declaration_submitted');
         View::redirect('/declarations/' . $id);
     }
 
@@ -160,7 +161,59 @@ final class DeclarationController
             'month' => $declaration['period_month'] ? (int) $declaration['period_month'] : null,
             'quarter' => $declaration['period_quarter'] ? (int) $declaration['period_quarter'] : null,
         ]);
-        echo \App\Modules\Automation\BordereauRenderer::renderHtml($declaration, $periodLabel);
+        echo self::injectPreviewBanner(
+            \App\Modules\Automation\BordereauRenderer::renderHtml($declaration, $periodLabel)
+        );
+        exit;
+    }
+
+    public static function exportCsv(int $id): void
+    {
+        Auth::requireAuth();
+        $declaration = DeclarationRepository::find($id);
+        if (!$declaration) {
+            View::redirect('/declarations');
+        }
+
+        $cf = is_array($declaration['computed_fields'])
+            ? $declaration['computed_fields']
+            : json_decode($declaration['computed_fields'] ?? '{}', true);
+        $periodLabel = DeadlineService::periodLabel($declaration['type'], [
+            'year' => (int) $declaration['period_year'],
+            'month' => $declaration['period_month'] ? (int) $declaration['period_month'] : null,
+            'quarter' => $declaration['period_quarter'] ? (int) $declaration['period_quarter'] : null,
+        ]);
+
+        $filename = sprintf('declaration_%d_%s.csv', $id, date('Ymd'));
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+
+        $out = fopen('php://output', 'w');
+        if ($out === false) {
+            exit;
+        }
+
+        fprintf($out, "\xEF\xBB\xBF");
+        fputcsv($out, ['Client', $declaration['raison_sociale']], ';');
+        fputcsv($out, ['Type', DeadlineService::typeLabel($declaration['type'])], ';');
+        fputcsv($out, ['Période', $periodLabel], ';');
+        fputcsv($out, ['Statut', $declaration['status']], ';');
+        fputcsv($out, [], ';');
+        fputcsv($out, ['Code', 'Libellé', 'Assiette', 'Taux', 'Montant (DA)'], ';');
+
+        foreach ($cf['lines'] ?? [] as $line) {
+            fputcsv($out, [
+                $line['code'] ?? '',
+                $line['label'] ?? '',
+                $line['assiette'] ?? $line['ca'] ?? '',
+                isset($line['taux']) ? $line['taux'] . '%' : '',
+                $line['montant'] ?? 0,
+            ], ';');
+        }
+
+        fputcsv($out, [], ';');
+        fputcsv($out, ['TOTAL', '', '', '', $cf['total'] ?? 0], ';');
+        fclose($out);
         exit;
     }
 
@@ -174,8 +227,9 @@ final class DeclarationController
         }
         $path = $declaration['receipt_path'];
         $mime = mime_content_type($path) ?: 'application/octet-stream';
+        $download = isset($_GET['download']);
         header('Content-Type: ' . $mime);
-        header('Content-Disposition: inline; filename="' . basename($path) . '"');
+        header('Content-Disposition: ' . ($download ? 'attachment' : 'inline') . '; filename="' . basename($path) . '"');
         readfile($path);
         exit;
     }
@@ -190,15 +244,23 @@ final class DeclarationController
         }
         $path = $declaration['generated_pdf_path'];
         $pdfPath = preg_replace('/\.html$/', '.pdf', $path);
+        $download = isset($_GET['download']);
         if ($pdfPath && is_file($pdfPath)) {
             header('Content-Type: application/pdf');
-            header('Content-Disposition: inline; filename="bordereau_' . $id . '.pdf"');
+            header('Content-Disposition: ' . ($download ? 'attachment' : 'inline') . '; filename="bordereau_' . $id . '.pdf"');
             readfile($pdfPath);
+            exit;
+        }
+        if ($download) {
+            header('Content-Type: text/html; charset=utf-8');
+            header('Content-Disposition: attachment; filename="bordereau_' . $id . '.html"');
+            readfile($path);
             exit;
         }
         header('Content-Type: text/html; charset=utf-8');
         header('Content-Disposition: inline; filename="bordereau_' . $id . '.html"');
-        readfile($path);
+        $html = file_get_contents($path) ?: '';
+        echo self::injectArchivedBanner($html, (int) filemtime($path));
         exit;
     }
 
@@ -207,9 +269,9 @@ final class DeclarationController
         Auth::requireAuth();
         $review = AiAutomationService::reviewDeclaration($id);
         if (!$review) {
-            View::flash('error', 'Analyse IA indisponible (OpenRouter).');
+            View::flashT('error', 'flash.declaration_ai_unavailable');
         } else {
-            View::flash('success', 'Analyse IA enregistrée.');
+            View::flashT('success', 'flash.declaration_ai_saved');
         }
         View::redirect('/declarations/' . $id);
     }
@@ -218,7 +280,88 @@ final class DeclarationController
     {
         Auth::requireAuth();
         $path = PdfGenerationService::generate($id);
-        View::flash($path ? 'success' : 'error', $path ? 'Bordereau généré et archivé dans le GED.' : 'Échec génération.');
+        View::flashT($path ? 'success' : 'error', $path ? 'flash.declaration_pdf_ok' : 'flash.declaration_pdf_failed');
         View::redirect('/declarations/' . $id);
+    }
+
+    public static function destroy(int $id): void
+    {
+        Auth::requireAuth();
+        if (!DeclarationRepository::deleteDraft($id)) {
+            View::flashT('error', 'flash.declaration_delete_draft_only');
+            View::redirect('/declarations');
+        }
+        View::flashT('success', 'flash.declaration_draft_deleted');
+        View::redirect('/declarations?status=DRAFT_CALCULATED');
+    }
+
+    public static function bulk(): void
+    {
+        Auth::requireAuth();
+        $ids = array_map('intval', $_POST['ids'] ?? []);
+        $action = $_POST['bulk_action'] ?? '';
+
+        if (empty($ids)) {
+            View::flashT('error', 'flash.declaration_bulk_none');
+            View::redirect('/declarations');
+        }
+
+        if ($action === 'delete') {
+            $count = DeclarationRepository::bulkDeleteDrafts($ids);
+            View::flashT('success', 'flash.declaration_bulk_deleted', ['count' => $count]);
+        } elseif ($action === 'approve' && Auth::canApprove()) {
+            $result = DeclarationRepository::approveBatch($ids);
+            View::flashT('success', 'flash.declaration_bulk_approved', [
+                'approved' => $result['approved'],
+                'skipped' => $result['skipped'],
+            ]);
+        } else {
+            View::flashT('error', 'flash.declaration_bulk_unauthorized');
+        }
+
+        View::redirect($_POST['redirect'] ?? '/declarations');
+    }
+
+    /** @return array{has_archive: bool, has_pdf: bool, generated_at: int|null, size: int|null} */
+    private static function bordereauMeta(array $declaration): array
+    {
+        $path = (string) ($declaration['generated_pdf_path'] ?? '');
+        $hasArchive = $path !== '' && is_file($path);
+        $pdfPath = $hasArchive ? preg_replace('/\.html$/', '.pdf', $path) : null;
+
+        return [
+            'has_archive' => $hasArchive,
+            'has_pdf' => $pdfPath !== null && is_file($pdfPath),
+            'generated_at' => $hasArchive ? (int) filemtime($path) : null,
+            'size' => $hasArchive ? (int) filesize($path) : null,
+        ];
+    }
+
+    private static function injectPreviewBanner(string $html): string
+    {
+        $banner = '<div class="no-print preview-banner"><div><strong>Aperçu en direct</strong> — '
+            . 'montants actuels de la déclaration (non archivé)</div>'
+            . '<button type="button" class="btn-print" onclick="window.print()" style="margin:0">Imprimer</button></div>';
+
+        if (str_contains($html, '<body>')) {
+            return preg_replace('/<body>/', '<body>' . $banner, $html, 1) ?? $html;
+        }
+
+        return $banner . $html;
+    }
+
+    private static function injectArchivedBanner(string $html, int $generatedAt): string
+    {
+        $date = date('d/m/Y H:i', $generatedAt);
+        $banner = '<div class="no-print preview-banner" style="background:#eff6ff;border-color:#93c5fd">'
+            . '<div><strong>Version archivée</strong> — générée le ' . htmlspecialchars($date)
+            . ' · <a href="?download=1" style="color:#1d4ed8">Télécharger</a></div>'
+            . '<button type="button" class="btn-print" onclick="window.print()" style="margin:0">Imprimer</button></div>';
+
+        if (str_contains($html, '<body>')) {
+            return preg_replace('/<body>/', '<body>' . $banner, $html, 1) ?? $html;
+        }
+
+        return $banner . $html;
     }
 }

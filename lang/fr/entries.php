@@ -1,0 +1,25 @@
+<?php
+
+return [
+    'payroll_mass' => 'Masse salariale (DA) *',
+    'payroll_mass_hint' => 'Montant brut total du mois pour ce client',
+    'headcount' => 'Effectif',
+    'assurees' => 'N° assurés (CACOBATPH)',
+    'entries' => 'Entrées',
+    'exits' => 'Sorties',
+    'save_calc' => 'Enregistrer & calculer déclarations',
+    'import_csv' => 'Import CSV multi-clients →',
+    'import_eyebrow' => 'Import en masse',
+    'import_title' => 'Paie Excel / CSV',
+    'import_period' => 'Période par défaut :',
+    'import_period_hint' => '(si colonnes mois/année absentes du fichier).',
+    'import_file_hint' => 'Excel .xlsx ou CSV — une ligne = un client/mois',
+    'import_btn' => 'Importer & recalculer CNAS',
+    'columns_min' => 'Colonnes minimales',
+    'import_after' => 'Après import → retour production mensuelle avec déclarations calculées.',
+    'sales_month' => 'Mois (G50)',
+    'ca_auto' => 'CA auto-entrepreneur',
+    'irg_base' => 'Base IRG acompte G50 (DA)',
+    'irg_hint' => 'Ex. SEKRANE BOUZIANE → 702 522 × 30% = 210 756,60 DA',
+    'save_g50' => 'Enregistrer & calculer G12 / G50',
+];

@@ -82,19 +82,173 @@ final class GedRepository
 
     public static function updateMeta(int $id, array $data): void
     {
+        $doc = DocumentRepository::find($id);
+        if (!$doc) {
+            return;
+        }
+
+        $newCategory = $data['category'] ?? ($doc['category'] ?? 'divers');
+        if ($doc['client_id'] && $newCategory !== ($doc['category'] ?? 'divers')) {
+            self::moveFileToCategory($id, $newCategory);
+            $doc = DocumentRepository::find($id) ?: $doc;
+        }
+
         Database::query(
-            'UPDATE documents d JOIN clients c ON c.id = d.client_id
-             SET d.title = ?, d.category = ?, d.notes = ?, d.tags = ?, d.ged_status = ?, d.updated_at = NOW()
-             WHERE d.id = ? AND c.cabinet_id = ?',
+            'UPDATE documents SET title = ?, category = ?, notes = ?, tags = ?, ged_status = ?, updated_at = NOW()
+             WHERE id = ? AND cabinet_id = ?',
             [
                 $data['title'],
-                $data['category'],
+                $newCategory,
                 $data['notes'] ?? null,
                 $data['tags'] ?? null,
                 $data['ged_status'],
                 $id,
                 Auth::cabinetId(),
             ]
+        );
+    }
+
+    public static function delete(int $id): bool
+    {
+        $doc = DocumentRepository::find($id);
+        if (!$doc) {
+            return false;
+        }
+        if (!empty($doc['file_path']) && is_file($doc['file_path'])) {
+            @unlink($doc['file_path']);
+        }
+        Database::query('DELETE FROM documents WHERE id = ? AND cabinet_id = ?', [$id, Auth::cabinetId()]);
+
+        return true;
+    }
+
+    public static function moveFileToCategory(int $id, string $category): void
+    {
+        $doc = DocumentRepository::find($id);
+        if (!$doc || !$doc['client_id']) {
+            return;
+        }
+
+        $cat = array_key_exists($category, ClientFolderService::CATEGORIES) ? $category : 'divers';
+        $clientId = (int) $doc['client_id'];
+        $newDir = ClientFolderService::categoryPath($clientId, $cat);
+        $basename = basename($doc['file_path']);
+        $newPath = $newDir . '/' . $basename;
+
+        if ($doc['file_path'] === $newPath) {
+            return;
+        }
+
+        if (is_file($doc['file_path'])) {
+            if (!@rename($doc['file_path'], $newPath)) {
+                if (@copy($doc['file_path'], $newPath)) {
+                    @unlink($doc['file_path']);
+                }
+            }
+        }
+
+        Database::query(
+            'UPDATE documents SET category = ?, subfolder = ?, file_path = ?, updated_at = NOW() WHERE id = ? AND cabinet_id = ?',
+            [$cat, $cat, $newPath, $id, Auth::cabinetId()]
+        );
+    }
+
+    public static function reassignClient(int $id, int $clientId, ?string $category = null): void
+    {
+        $doc = DocumentRepository::find($id);
+        if (!$doc) {
+            return;
+        }
+
+        $client = Database::fetchOne(
+            'SELECT id FROM clients WHERE id = ? AND cabinet_id = ?',
+            [$clientId, Auth::cabinetId()]
+        );
+        if (!$client) {
+            throw new \InvalidArgumentException('Client introuvable');
+        }
+
+        $cat = $category ?? $doc['category'] ?? 'divers';
+        $cat = array_key_exists($cat, ClientFolderService::CATEGORIES) ? $cat : 'divers';
+        $newDir = ClientFolderService::categoryPath($clientId, $cat);
+        $basename = basename($doc['file_path'] ?: ('doc_' . $id));
+        $newPath = $newDir . '/' . $basename;
+
+        if (!empty($doc['file_path']) && is_file($doc['file_path']) && $doc['file_path'] !== $newPath) {
+            if (!@rename($doc['file_path'], $newPath)) {
+                if (@copy($doc['file_path'], $newPath)) {
+                    @unlink($doc['file_path']);
+                }
+            }
+        }
+
+        Database::query(
+            'UPDATE documents SET client_id = ?, category = ?, subfolder = ?, file_path = ?, updated_at = NOW()
+             WHERE id = ? AND cabinet_id = ?',
+            [$clientId, $cat, $cat, $newPath, $id, Auth::cabinetId()]
+        );
+    }
+
+    /** @param list<int> $ids */
+    public static function bulk(int $clientId, array $ids, string $action, array $payload = []): int
+    {
+        $count = 0;
+        foreach ($ids as $rawId) {
+            $id = (int) $rawId;
+            $doc = DocumentRepository::find($id);
+            if (!$doc || (int) ($doc['client_id'] ?? 0) !== $clientId) {
+                continue;
+            }
+
+            switch ($action) {
+                case 'delete':
+                    if (self::delete($id)) {
+                        $count++;
+                    }
+                    break;
+                case 'archive':
+                    self::updateMeta($id, [
+                        'title' => $doc['title'] ?? $doc['original_name'],
+                        'category' => $doc['category'] ?? 'divers',
+                        'notes' => $doc['notes'] ?? '',
+                        'tags' => $doc['tags'] ?? '',
+                        'ged_status' => 'archive',
+                    ]);
+                    $count++;
+                    break;
+                case 'status':
+                    self::updateMeta($id, [
+                        'title' => $doc['title'] ?? $doc['original_name'],
+                        'category' => $doc['category'] ?? 'divers',
+                        'notes' => $doc['notes'] ?? '',
+                        'tags' => $doc['tags'] ?? '',
+                        'ged_status' => $payload['ged_status'] ?? 'a_traiter',
+                    ]);
+                    $count++;
+                    break;
+                case 'move':
+                    self::moveFileToCategory($id, $payload['category'] ?? 'divers');
+                    $count++;
+                    break;
+            }
+        }
+
+        return $count;
+    }
+
+    public static function recentForCabinet(int $limit = 20): array
+    {
+        $limit = max(1, min(100, $limit));
+
+        return Database::fetchAll(
+            "SELECT d.*, c.raison_sociale,
+             (SELECT confidence FROM document_ocr_results WHERE document_id = d.id ORDER BY id DESC LIMIT 1) AS confidence
+             FROM documents d
+             LEFT JOIN clients c ON c.id = d.client_id
+             WHERE d.cabinet_id = ?
+             ORDER BY COALESCE(d.updated_at, d.created_at) DESC
+             LIMIT {$limit}",
+            [Auth::cabinetId()]
         );
     }
 

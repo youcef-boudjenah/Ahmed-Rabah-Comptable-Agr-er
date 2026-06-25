@@ -28,18 +28,24 @@ final class DocumentController
     {
         Auth::requireAuth();
         if (!isset($_FILES['document']) || $_FILES['document']['error'] !== UPLOAD_ERR_OK) {
-            View::flash('error', 'Erreur upload.');
+            View::flashT('error', 'flash.document_upload_error');
             View::redirect('/documents');
         }
         $clientId = $_POST['client_id'] !== '' ? (int) $_POST['client_id'] : null;
-        $id = DocumentRepository::storeUpload($_FILES['document'], $clientId);
+        if ($clientId) {
+            $category = $_POST['category'] ?? 'divers';
+            $title = trim($_POST['title'] ?? '') ?: null;
+            $id = GedRepository::storeInClientFolder($clientId, $_FILES['document'], $category, $title);
+        } else {
+            $id = DocumentRepository::storeUpload($_FILES['document'], null);
+        }
 
         if (isset($_POST['process_now'])) {
             OcrService::processDocument($id);
-            View::flash('success', 'Document traité.');
+            View::flashT('success', 'flash.document_processed');
         } else {
             self::processQueueOnce();
-            View::flash('success', 'Document uploadé. Traitement OCR en cours.');
+            View::flashT('success', 'flash.document_uploaded_ocr');
         }
         View::redirect('/documents/' . $id);
     }
@@ -62,7 +68,7 @@ final class DocumentController
     {
         Auth::requireAuth();
         OcrService::processDocument($id);
-        View::flash('success', 'OCR terminé.');
+        View::flashT('success', 'flash.document_ocr_done');
         View::redirect('/documents/' . $id);
     }
 
@@ -77,7 +83,7 @@ final class DocumentController
 
         $clientId = (int) ($_POST['client_id'] ?? $doc['client_id'] ?? 0);
         if ($clientId <= 0) {
-            View::flash('error', 'Sélectionnez un client.');
+            View::flashT('error', 'flash.document_client_required');
             View::redirect('/documents/' . $id);
         }
 
@@ -106,7 +112,7 @@ final class DocumentController
             ? WorkflowService::afterSalesSaved($clientId)
             : WorkflowService::afterPayrollSaved($clientId);
 
-        View::flash('success', 'Données importées depuis OCR. Déclarations recalculées.');
+        View::flashT('success', 'flash.document_imported');
         View::redirect($declId ? '/declarations/' . $declId : '/declarations?status=DRAFT_CALCULATED');
     }
 

@@ -35,4 +35,14 @@ final class ClientNoteRepository
             [$id, $clientId, Auth::cabinetId()]
         );
     }
+
+    public static function update(int $id, int $clientId, string $content, bool $pinned = false): void
+    {
+        Database::query(
+            'UPDATE client_notes n JOIN clients c ON c.id = n.client_id
+             SET n.content = ?, n.is_pinned = ?
+             WHERE n.id = ? AND n.client_id = ? AND c.cabinet_id = ?',
+            [$content, $pinned ? 1 : 0, $id, $clientId, Auth::cabinetId()]
+        );
+    }
 }

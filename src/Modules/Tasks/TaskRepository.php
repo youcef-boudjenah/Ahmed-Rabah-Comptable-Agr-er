@@ -41,6 +41,45 @@ final class TaskRepository
     );
   }
 
+  public static function find(int $id, int $cabinetId): ?array
+  {
+    return Database::fetchOne(
+      'SELECT t.*, c.raison_sociale FROM cabinet_tasks t
+       LEFT JOIN clients c ON c.id = t.client_id
+       WHERE t.id = ? AND t.cabinet_id = ?',
+      [$id, $cabinetId]
+    );
+  }
+
+  public static function update(int $id, int $cabinetId, array $data): void
+  {
+    Database::query(
+      'UPDATE cabinet_tasks SET title = ?, client_id = ?, due_date = ?, priority = ?
+       WHERE id = ? AND cabinet_id = ?',
+      [
+        $data['title'],
+        $data['client_id'],
+        $data['due_date'] ?: null,
+        $data['priority'],
+        $id,
+        $cabinetId,
+      ]
+    );
+  }
+
+  public static function delete(int $id, int $cabinetId): void
+  {
+    Database::query('DELETE FROM cabinet_tasks WHERE id = ? AND cabinet_id = ?', [$id, $cabinetId]);
+  }
+
+  public static function reopen(int $id, int $cabinetId): void
+  {
+    Database::query(
+      'UPDATE cabinet_tasks SET is_done = 0, completed_at = NULL WHERE id = ? AND cabinet_id = ?',
+      [$id, $cabinetId]
+    );
+  }
+
   /** @return list<array<string, mixed>> */
   public static function listForCabinet(int $cabinetId, string $filter = 'open'): array
   {

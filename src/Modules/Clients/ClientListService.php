@@ -87,6 +87,10 @@ final class ClientListService
             'total' => $total,
             'critical' => $critical,
             'warning' => $warning,
+            'archived' => (int) Database::fetchOne(
+                'SELECT COUNT(*) AS c FROM clients WHERE cabinet_id = ? AND is_active = 0',
+                [$cabinetId]
+            )['c'],
             'secteurs' => array_column($secteurs, 'secteur'),
         ];
     }
@@ -121,7 +125,8 @@ final class ClientListService
     /** @return array{0: string, 1: list<mixed>} */
     private static function buildWhere(int $cabinetId, array $filters): array
     {
-        $where = ['c.cabinet_id = ?', 'c.is_active = 1'];
+        $archived = ($filters['status'] ?? '') === 'archived';
+        $where = ['c.cabinet_id = ?', $archived ? 'c.is_active = 0' : 'c.is_active = 1'];
         $params = [$cabinetId];
 
         $q = trim($filters['q'] ?? '');
@@ -142,7 +147,9 @@ final class ClientListService
         }
 
         $status = $filters['status'] ?? '';
-        if ($status === 'critical') {
+        if ($status === 'archived') {
+            // already filtered by is_active = 0
+        } elseif ($status === 'critical') {
             $where[] = "EXISTS (SELECT 1 FROM alerts a WHERE a.client_id = c.id AND a.is_read = 0 AND a.severity = 'critical')";
         } elseif ($status === 'warning') {
             $where[] = "EXISTS (SELECT 1 FROM alerts a WHERE a.client_id = c.id AND a.is_read = 0 AND a.severity IN ('warning','critical'))";

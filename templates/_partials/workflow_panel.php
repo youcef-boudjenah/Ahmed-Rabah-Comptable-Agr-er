@@ -1,22 +1,22 @@
-<?php
+﻿<?php
 /** @var array<string, mixed>|null $nextStep */
 /** @var array<int, array<string, mixed>> $gedDocs */
 $nextStep = $nextStep ?? null;
 $gedDocs = $gedDocs ?? [];
 $steps = [
-    1 => ['label' => 'Saisie', 'desc' => 'Paie ou ventes'],
-    2 => ['label' => 'Calcul', 'desc' => 'Brouillon auto'],
-    3 => ['label' => 'Approbation', 'desc' => 'Contrôle & validation'],
-    4 => ['label' => 'Bordereau', 'desc' => 'PDF généré'],
-    5 => ['label' => 'Dépôt & GED', 'desc' => 'Quittance archivée'],
+    1 => ['label' => __('common.workflow_step_entry'), 'desc' => __('common.workflow_step_entry_desc')],
+    2 => ['label' => __('common.workflow_step_calc'), 'desc' => __('common.workflow_step_calc_desc')],
+    3 => ['label' => __('common.workflow_step_approve'), 'desc' => __('common.workflow_step_approve_desc')],
+    4 => ['label' => __('common.workflow_step_bordereau'), 'desc' => __('common.workflow_step_bordereau_desc')],
+    5 => ['label' => __('common.workflow_step_deposit'), 'desc' => __('common.workflow_step_deposit_desc')],
 ];
 $current = $nextStep['step'] ?? 1;
 ?>
 <div class="card mb-6">
     <div class="card-header">
-        <h3>Parcours de la déclaration</h3>
+        <h3><?= htmlspecialchars(__('common.workflow_title')) ?></h3>
         <?php if ($nextStep): ?>
-        <span class="badge badge-info">Étape <?= $current ?>/<?= $nextStep['total'] ?></span>
+        <span class="badge badge-info"><?= htmlspecialchars(__('common.workflow_step', ['current' => (string) $current, 'total' => (string) $nextStep['total']])) ?></span>
         <?php endif; ?>
     </div>
     <div class="card-body">
@@ -24,7 +24,7 @@ $current = $nextStep['step'] ?? 1;
             <?php foreach ($steps as $num => $s): ?>
             <div class="flex-1 text-center">
                 <div class="h-1.5 rounded-full mb-1 <?= $num <= $current ? 'bg-accent' : 'bg-slate-200' ?>"></div>
-                <p class="text-[10px] font-medium <?= $num <= $current ? 'text-slate-800' : 'text-slate-400' ?>"><?= $s['label'] ?></p>
+                <p class="text-[10px] font-medium <?= $num <= $current ? 'text-slate-800' : 'text-slate-400' ?>"><?= htmlspecialchars($s['label']) ?></p>
             </div>
             <?php endforeach; ?>
         </div>
@@ -47,16 +47,16 @@ $current = $nextStep['step'] ?? 1;
 
         <?php if (!empty($gedDocs)): ?>
         <div class="mt-4 pt-4 border-t border-slate-100">
-            <p class="text-xs font-semibold uppercase text-slate-400 mb-2">Pièces dans le dossier GED</p>
+            <p class="text-xs font-semibold uppercase text-slate-400 mb-2"><?= htmlspecialchars(__('common.workflow_ged_docs')) ?></p>
             <ul class="space-y-1 text-sm">
                 <?php foreach ($gedDocs as $doc): ?>
                 <li class="flex justify-between items-center">
                     <span><?= htmlspecialchars($doc['title'] ?? $doc['original_name']) ?></span>
-                    <a href="/documents/<?= $doc['id'] ?>/download" target="_blank" class="text-xs text-accent hover:underline">Voir</a>
+                    <a href="/documents/<?= $doc['id'] ?>/download" target="_blank" class="text-xs text-accent hover:underline"><?= htmlspecialchars(__('common.view')) ?></a>
                 </li>
                 <?php endforeach; ?>
             </ul>
-            <a href="/clients/<?= (int) ($declaration['client_id'] ?? 0) ?>/dossier" class="text-xs text-accent hover:underline mt-2 inline-block">Dossier complet →</a>
+            <a href="/clients/<?= (int) ($declaration['client_id'] ?? 0) ?>/dossier" class="text-xs text-accent hover:underline mt-2 inline-block"><?= htmlspecialchars(__('common.see_complete_folder')) ?></a>
         </div>
         <?php endif; ?>
     </div>

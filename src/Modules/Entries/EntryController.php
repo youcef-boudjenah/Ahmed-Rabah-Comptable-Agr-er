@@ -15,9 +15,17 @@ final class EntryController
     {
         Auth::requireAuth();
         $selected = $clientId ?? (isset($_GET['client']) ? (int) $_GET['client'] : null);
+        $year = isset($_GET['year']) ? (int) $_GET['year'] : (int) date('Y');
+        $month = isset($_GET['month']) ? (int) $_GET['month'] : max(1, (int) date('n') - 1);
+        if ($month < 1) {
+            $month = 12;
+            $year--;
+        }
         View::render('entries/payroll', [
             'title' => 'Saisie paie',
             'selectedClientId' => $selected,
+            'periodYear' => $year,
+            'periodMonth' => $month,
         ]);
     }
 
@@ -37,7 +45,7 @@ final class EntryController
             'notes' => trim($_POST['notes'] ?? ''),
         ]);
         $declId = WorkflowService::afterPayrollSaved($clientId);
-        View::flash('success', 'Paie enregistrée. Déclarations CNAS/CACOBATPH recalculées.');
+        View::flashT('success', 'flash.entry_payroll_saved');
         View::redirect($declId ? '/declarations/' . $declId : '/declarations?status=DRAFT_CALCULATED');
     }
 
@@ -60,7 +68,7 @@ final class EntryController
         Auth::requireAuth();
         $field = isset($_FILES['file']) ? 'file' : 'csv';
         if (!isset($_FILES[$field]) || $_FILES[$field]['error'] !== UPLOAD_ERR_OK) {
-            View::flash('error', 'Fichier Excel (.xlsx) ou CSV requis.');
+            View::flashT('error', 'flash.entry_import_file');
             View::redirect('/entries/payroll/import');
         }
         $defaults = [
@@ -68,11 +76,10 @@ final class EntryController
             'month' => (int) ($_POST['default_month'] ?? date('n')),
         ];
         $result = PayrollImportService::importFile($_FILES[$field]['tmp_name'], $defaults);
-        $msg = sprintf('%d ligne(s) importée(s), %d ignorée(s).', $result['imported'], $result['skipped']);
-        if (!empty($result['errors'])) {
-            $msg .= ' ' . implode(' | ', array_slice($result['errors'], 0, 3));
-        }
-        View::flash($result['imported'] > 0 ? 'success' : 'error', $msg);
+        View::flashT($result['imported'] > 0 ? 'success' : 'error', 'flash.entry_import_result', [
+            'imported' => $result['imported'],
+            'skipped' => $result['skipped'],
+        ]);
         $redirect = $_POST['redirect'] ?? '/declarations?status=DRAFT_CALCULATED';
         if ($result['imported'] > 0 && str_starts_with($redirect, '/production')) {
             $sep = str_contains($redirect, '?') ? '&' : '?';
@@ -106,7 +113,7 @@ final class EntryController
             'notes' => trim($_POST['notes'] ?? ''),
         ]);
         $declId = WorkflowService::afterSalesSaved($clientId);
-        View::flash('success', 'Ventes enregistrées. Déclarations G50/G12 recalculées.');
+        View::flashT('success', 'flash.entry_sales_saved');
         View::redirect($declId ? '/declarations/' . $declId : '/declarations?status=DRAFT_CALCULATED');
     }
 }

@@ -13,20 +13,12 @@ final class AutomationController
     public static function index(): void
     {
         Auth::requireAuth();
-        $cabinetId = Auth::cabinetId();
-        $highlightRun = null;
-        if (isset($_GET['run'])) {
-            $highlightRun = AutomationPipeline::findRun((int) $_GET['run'], $cabinetId);
+        $query = $_SERVER['QUERY_STRING'] ?? '';
+        $target = '/production' . ($query !== '' ? '?' . $query : '');
+        if (!str_contains($query, 'panel=automation')) {
+            $target .= ($query !== '' ? '&' : '?') . 'panel=automation';
         }
-
-        View::render('automation/index', [
-            'title' => 'Traitement automatique',
-            'recentRuns' => AutomationPipeline::recentRuns($cabinetId, 15),
-            'stats' => DeadlineService::cabinetStats($cabinetId),
-            'preview' => AutomationPipeline::getPreview($cabinetId),
-            'highlightRun' => $highlightRun,
-            'hasOpenRouter' => (require ROOT_PATH . '/config/app.php')['openrouter_api_key'] !== '',
-        ]);
+        View::redirect($target);
     }
 
     public static function showRun(int $id): void
@@ -34,7 +26,7 @@ final class AutomationController
         Auth::requireAuth();
         $run = AutomationPipeline::findRun($id, Auth::cabinetId());
         if (!$run) {
-            View::redirect('/automation');
+            View::redirect('/production?panel=automation');
         }
         View::render('automation/run', [
             'title' => 'Rapport traitement #' . $id,
@@ -64,7 +56,7 @@ final class AutomationController
                 'ai_review' => isset($_POST['with_ai']), 'ai_classify' => isset($_POST['with_ai'])];
         }
         $result = AutomationPipeline::runControlled(Auth::cabinetId(), Auth::id(), $steps, 'custom');
-        self::redirectWithReport($result, '/automation');
+        self::redirectWithReport($result, '/production?panel=automation');
     }
 
     public static function batchRecalculate(): void
@@ -76,7 +68,7 @@ final class AutomationController
             ['recalc' => true],
             'recalc_only'
         );
-        self::redirectWithReport($result, '/automation');
+        self::redirectWithReport($result, '/production?panel=automation');
     }
 
     public static function runFull(): void
@@ -85,7 +77,7 @@ final class AutomationController
         $hasKey = (require ROOT_PATH . '/config/app.php')['openrouter_api_key'] !== '';
         $withAi = $hasKey && isset($_POST['with_ai']);
         $result = AutomationPipeline::runFull(Auth::cabinetId(), Auth::id(), $withAi);
-        self::redirectWithReport($result, '/automation');
+        self::redirectWithReport($result, '/production?panel=automation');
     }
 
     /** Traitement rapide depuis le tableau de bord — sans IA, retour sur / */
@@ -110,7 +102,7 @@ final class AutomationController
             ['pdfs' => true],
             'pdfs_only'
         );
-        self::redirectWithReport($result, '/automation');
+        self::redirectWithReport($result, '/production?panel=automation');
     }
 
     public static function classifyDocuments(): void
@@ -122,14 +114,15 @@ final class AutomationController
             ['ai_classify' => true],
             'classify_only'
         );
-        self::redirectWithReport($result, '/automation');
+        self::redirectWithReport($result, '/production?panel=automation');
     }
 
     /** @param array{run_id: int, steps: list<array<string, mixed>>, summary: array<string, mixed>, duration_ms: int} $result */
     public static function redirectWithReport(array $result, string $returnPath): never
     {
         View::flash('success', self::humanSummary($result));
-        View::redirect($returnPath . '?run=' . $result['run_id']);
+        $sep = str_contains($returnPath, '?') ? '&' : '?';
+        View::redirect($returnPath . $sep . 'run=' . $result['run_id']);
     }
 
     /** @param array{run_id: int, steps: list<array<string, mixed>>, duration_ms: int} $result */

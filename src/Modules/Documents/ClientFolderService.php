@@ -26,6 +26,15 @@ final class ClientFolderService
         return self::basePath() . '/' . $clientId;
     }
 
+    public static function categoryLabels(): array
+    {
+        $labels = [];
+        foreach (array_keys(self::CATEGORIES) as $key) {
+            $labels[$key] = __('ged.cat_' . $key);
+        }
+        return $labels;
+    }
+
     public static function ensure(int $clientId): string
     {
         $path = self::clientPath($clientId);
@@ -72,7 +81,7 @@ final class ClientFolderService
                 [$clientId, $key]
             )['c'] ?? 0);
             $structure[$key] = [
-                'label' => $label,
+                'label' => __('ged.cat_' . $key),
                 'count' => max(count($files), $dbCount),
                 'size' => $size,
             ];

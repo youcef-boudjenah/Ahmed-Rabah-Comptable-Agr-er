@@ -30,4 +30,10 @@ final class View
     {
         $_SESSION['flash'] = ['type' => $type, 'message' => $message];
     }
+
+    /** @param array<string, string|int|float> $replace */
+    public static function flashT(string $type, string $key, array $replace = []): void
+    {
+        self::flash($type, __($key, $replace));
+    }
 }

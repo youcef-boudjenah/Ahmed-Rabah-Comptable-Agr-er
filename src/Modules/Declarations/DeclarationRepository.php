@@ -102,6 +102,35 @@ final class DeclarationRepository
         AuditLog::write('update_computed', 'declarations', $id);
     }
 
+    public static function deleteDraft(int $id): bool
+    {
+        $row = Database::fetchOne(
+            "SELECT d.id FROM declarations d JOIN clients c ON c.id = d.client_id
+             WHERE d.id = ? AND c.cabinet_id = ? AND d.status = 'DRAFT_CALCULATED'",
+            [$id, Auth::cabinetId()]
+        );
+        if (!$row) {
+            return false;
+        }
+        Database::query('DELETE FROM declarations WHERE id = ?', [$id]);
+        AuditLog::write('delete', 'declarations', $id);
+
+        return true;
+    }
+
+    /** @param list<int> $ids */
+    public static function bulkDeleteDrafts(array $ids): int
+    {
+        $count = 0;
+        foreach ($ids as $id) {
+            if (self::deleteDraft((int) $id)) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
     public static function stats(): array
     {
         $cabinetId = Auth::cabinetId();

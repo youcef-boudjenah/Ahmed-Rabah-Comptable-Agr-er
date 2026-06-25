@@ -24,9 +24,13 @@ spl_autoload_register(function (string $class): void {
     }
 });
 
+require_once ROOT_PATH . '/src/Core/helpers.php';
+
 $config = require ROOT_PATH . '/config/app.php';
 date_default_timezone_set($config['timezone']);
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+
+\App\Core\Lang::init();

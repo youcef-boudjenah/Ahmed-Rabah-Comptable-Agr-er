@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /** @var array $declaration */
 /** @var string $periodLabel */
 $cf = is_array($declaration['computed_fields'] ?? null)

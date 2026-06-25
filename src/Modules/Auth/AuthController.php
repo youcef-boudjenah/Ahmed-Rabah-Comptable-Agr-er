@@ -24,7 +24,7 @@ final class AuthController
         if (Auth::attempt($email, $password)) {
             View::redirect('/');
         }
-        View::flash('error', 'Identifiants invalides.');
+        View::flashT('error', 'flash.auth_invalid');
         View::redirect('/login');
     }
 

@@ -1,0 +1,25 @@
+<?php
+
+return [
+    'payroll_mass' => 'الكتلة الأجرية (دج) *',
+    'payroll_mass_hint' => 'المبلغ الإجمالي الخام للشهر لهذا العميل',
+    'headcount' => 'العدد',
+    'assurees' => 'عدد المؤمن عليهم (CACOBATPH)',
+    'entries' => 'الدخول',
+    'exits' => 'الخروج',
+    'save_calc' => 'حفظ وحساب التصريحات',
+    'import_csv' => 'استيراد CSV متعدد العملاء →',
+    'import_eyebrow' => 'استيراد جماعي',
+    'import_title' => 'رواتب Excel / CSV',
+    'import_period' => 'الفترة الافتراضية:',
+    'import_period_hint' => '(إذا كانت أعمدة الشهر/السنة غائبة من الملف).',
+    'import_file_hint' => 'Excel .xlsx أو CSV — سطر واحد = عميل/شهر',
+    'import_btn' => 'استيراد وإعادة حساب CNAS',
+    'columns_min' => 'الأعمدة الدنيا',
+    'import_after' => 'بعد الاستيراد → العودة للإنتاج الشهري مع التصريحات المحسوبة.',
+    'sales_month' => 'الشهر (G50)',
+    'ca_auto' => 'رقم أعمال المقاول الذاتي',
+    'irg_base' => 'أساس دفعة IRG G50 (دج)',
+    'irg_hint' => 'مثال: SEKRANE BOUZIANE → 702 522 × 30% = 210 756,60 دج',
+    'save_g50' => 'حفظ وحساب G12 / G50',
+];

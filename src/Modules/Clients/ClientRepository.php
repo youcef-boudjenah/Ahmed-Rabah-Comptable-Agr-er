@@ -96,8 +96,80 @@ final class ClientRepository
 
     public static function delete(int $id): void
     {
-        Database::query('DELETE FROM clients WHERE id = ? AND cabinet_id = ?', [$id, Auth::cabinetId()]);
-        AuditLog::write('delete', 'clients', $id);
+        self::archive($id);
+    }
+
+    public static function archive(int $id): void
+    {
+        Database::query(
+            'UPDATE clients SET is_active = 0, updated_at = NOW() WHERE id = ? AND cabinet_id = ?',
+            [$id, Auth::cabinetId()]
+        );
+        AuditLog::write('archive', 'clients', $id);
+    }
+
+    public static function restore(int $id): void
+    {
+        Database::query(
+            'UPDATE clients SET is_active = 1, updated_at = NOW() WHERE id = ? AND cabinet_id = ?',
+            [$id, Auth::cabinetId()]
+        );
+        AuditLog::write('restore', 'clients', $id);
+        AlertService::syncForClient($id);
+    }
+
+    public static function duplicate(int $id): int
+    {
+        $client = self::find($id);
+        if (!$client) {
+            throw new \InvalidArgumentException('Client introuvable');
+        }
+
+        return self::create([
+            'raison_sociale' => $client['raison_sociale'] . ' (copie)',
+            'nif' => $client['nif'] ?? '',
+            'nin' => $client['nin'] ?? '',
+            'numero_cotisant' => null,
+            'secteur' => $client['secteur'],
+            'regime_fiscal' => $client['regime_fiscal'],
+            'cnas_regime' => $client['cnas_regime'],
+            'wilaya' => $client['wilaya'] ?? '',
+            'adresse' => $client['adresse'] ?? '',
+            'activite' => $client['activite'] ?? '',
+            'contact_email' => $client['contact_email'] ?? null,
+            'contact_phone' => $client['contact_phone'] ?? null,
+            'contact_name' => $client['contact_name'] ?? null,
+        ]);
+    }
+
+    /** @param list<int> $ids */
+    public static function bulkArchive(array $ids): int
+    {
+        $count = 0;
+        foreach ($ids as $id) {
+            $id = (int) $id;
+            if ($id > 0 && self::find($id)) {
+                self::archive($id);
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    /** @param list<int> $ids */
+    public static function bulkRestore(array $ids): int
+    {
+        $count = 0;
+        foreach ($ids as $id) {
+            $id = (int) $id;
+            if ($id > 0 && self::find($id)) {
+                self::restore($id);
+                $count++;
+            }
+        }
+
+        return $count;
     }
 
     private static function decryptRow(array $row): array

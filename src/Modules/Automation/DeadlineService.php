@@ -311,12 +311,12 @@ final class DeadlineService
   public static function typeLabel(string $type): string
   {
     return match ($type) {
-      'CNAS_MENSUELLE' => 'CNAS mensuelle',
-      'CNAS_TRIMESTRIELLE' => 'CNAS trimestrielle',
-      'CACOBATPH' => 'CACOBATPH',
-      'G50' => 'G50 — Impôts & taxes',
-      'G12' => 'G12 — IFU prévisionnelle',
-      'G12_BIS' => 'G12 Bis — IFU définitive',
+      'CNAS_MENSUELLE' => __('common.type_cnas_monthly'),
+      'CNAS_TRIMESTRIELLE' => __('common.type_cnas_quarterly'),
+      'CACOBATPH' => __('common.type_cacobatph'),
+      'G50' => __('common.type_g50'),
+      'G12' => __('common.type_g12'),
+      'G12_BIS' => __('common.type_g12_bis'),
       default => $type,
     };
   }
@@ -324,26 +324,26 @@ final class DeadlineService
   public static function periodLabel(string $type, array $period): string
   {
     if ($period['quarter']) {
-      return $period['quarter'] . 'er trimestre ' . $period['year'];
+      return __('common.period_quarter', ['q' => $period['quarter'], 'year' => $period['year']]);
     }
     if ($period['month']) {
-      return (self::MONTHS_FR[$period['month']] ?? '') . ' ' . $period['year'];
+      return __('common.month_' . (int) $period['month']) . ' ' . $period['year'];
     }
     if ($type === 'G12_BIS') {
-      return 'Exercice ' . $period['year'];
+      return __('common.period_exercise', ['year' => $period['year']]);
     }
-    return 'Année ' . $period['year'];
+    return __('common.period_year', ['year' => $period['year']]);
   }
 
   public static function statusLabel(string $status): string
   {
     return match ($status) {
-      'submitted' => 'Déposée',
-      'approved' => 'Approuvée — à déposer',
-      'draft_ready' => 'Brouillon prêt',
-      'missing_data' => 'Données manquantes',
-      'pending_calc' => 'À calculer',
-      'overdue' => 'En retard',
+      'submitted' => __('common.status_submitted'),
+      'approved' => __('common.status_approved'),
+      'draft_ready' => __('common.status_draft_ready'),
+      'missing_data' => __('common.status_missing_data'),
+      'pending_calc' => __('common.status_pending_calc'),
+      'overdue' => __('common.status_overdue'),
       default => $status,
     };
   }

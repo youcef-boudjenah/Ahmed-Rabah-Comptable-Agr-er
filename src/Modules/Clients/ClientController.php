@@ -24,7 +24,7 @@ final class ClientController
         $result = ClientListService::paginated($filters);
 
         View::render('clients/index', [
-            'title' => 'Clients',
+            'title' => __('nav.clients'),
             'clients' => $result['items'],
             'pagination' => $result,
             'filters' => $filters,
@@ -52,7 +52,7 @@ final class ClientController
     {
         Auth::requireAuth();
         ClientRepository::create(self::input());
-        View::flash('success', 'Client créé.');
+        View::flashT('success', 'flash.client_created');
         View::redirect('/clients');
     }
 
@@ -70,7 +70,7 @@ final class ClientController
     {
         Auth::requireAuth();
         ClientRepository::update($id, self::input());
-        View::flash('success', 'Client mis à jour.');
+        View::flashT('success', 'flash.client_updated');
         View::redirect('/clients/' . $id);
     }
 
@@ -94,16 +94,85 @@ final class ClientController
         $content = trim($_POST['content'] ?? '');
         if ($content !== '' && ClientRepository::find($id)) {
             ClientNoteRepository::add($id, $content, isset($_POST['pin']));
-            View::flash('success', 'Note ajoutée.');
+            View::flashT('success', 'flash.client_note_added');
         }
         View::redirect('/clients/' . $id);
     }
 
     public static function deleteNote(int $id, int $noteId): void
     {
-        Auth::requireAuth();
         ClientNoteRepository::delete($noteId, $id);
         View::redirect('/clients/' . $id);
+    }
+
+    public static function updateNote(int $id, int $noteId): void
+    {
+        Auth::requireAuth();
+        $content = trim($_POST['content'] ?? '');
+        if ($content !== '' && ClientRepository::find($id)) {
+            ClientNoteRepository::update($noteId, $id, $content, isset($_POST['pin']));
+            View::flashT('success', 'flash.client_note_updated');
+        }
+        View::redirect('/clients/' . $id);
+    }
+
+    public static function archive(int $id): void
+    {
+        Auth::requireAuth();
+        if (!ClientRepository::find($id)) {
+            View::redirect('/clients');
+        }
+        ClientRepository::archive($id);
+        View::flashT('success', 'flash.client_archived');
+        View::redirect('/clients');
+    }
+
+    public static function restore(int $id): void
+    {
+        Auth::requireAuth();
+        if (!ClientRepository::find($id)) {
+            View::redirect('/clients');
+        }
+        ClientRepository::restore($id);
+        View::flashT('success', 'flash.client_restored');
+        View::redirect('/clients/' . $id);
+    }
+
+    public static function duplicate(int $id): void
+    {
+        Auth::requireAuth();
+        try {
+            $newId = ClientRepository::duplicate($id);
+            View::flashT('success', 'flash.client_duplicated');
+            View::redirect('/clients/' . $newId . '/edit');
+        } catch (\InvalidArgumentException) {
+            View::redirect('/clients');
+        }
+    }
+
+    public static function bulk(): void
+    {
+        Auth::requireAuth();
+        $ids = array_map('intval', $_POST['ids'] ?? []);
+        $action = $_POST['bulk_action'] ?? '';
+        if (empty($ids) || $action === '') {
+            View::flashT('error', 'flash.client_bulk_none');
+            View::redirect('/clients' . (isset($_POST['return_query']) ? '?' . $_POST['return_query'] : ''));
+        }
+
+        $count = match ($action) {
+            'archive' => ClientRepository::bulkArchive($ids),
+            'restore' => ClientRepository::bulkRestore($ids),
+            default => 0,
+        };
+
+        $msg = match ($action) {
+            'archive' => __('flash.client_bulk_archived', ['count' => $count]),
+            'restore' => __('flash.client_bulk_restored', ['count' => $count]),
+            default => __('flash.client_bulk_unknown'),
+        };
+        View::flash($count > 0 ? 'success' : 'error', $msg);
+        View::redirect('/clients' . (isset($_POST['return_query']) ? '?' . $_POST['return_query'] : ''));
     }
 
     private static function input(): array

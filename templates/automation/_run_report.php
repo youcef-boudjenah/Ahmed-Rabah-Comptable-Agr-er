@@ -1,26 +1,27 @@
-<?php
+﻿<?php
 /** @var array<string, mixed> $run */
 $res = $run['result'] ?? [];
 $steps = $res['steps'] ?? [];
 $summary = $res['summary'] ?? [];
 $statusIcon = ['ok' => '✓', 'skipped' => '—', 'error' => '✗', 'warning' => '!'];
+$statusLabels = ['ok' => __('common.ok'), 'skipped' => __('common.skipped'), 'warning' => __('common.warning'), 'error' => __('common.error')];
 ?>
 <div class="run-report">
     <div class="flex flex-wrap justify-between items-start gap-4 mb-4">
         <div>
-            <p class="eyebrow">Rapport #<?= (int) $run['id'] ?></p>
+            <p class="eyebrow"><?= htmlspecialchars(__('common.report_num', ['n' => (int) $run['id']])) ?></p>
             <h3 class="text-base font-semibold text-slate-900 mt-0.5">
                 <?= htmlspecialchars($run['run_type']) ?> — <?= date('d/m/Y H:i:s', strtotime($run['created_at'])) ?>
             </h3>
             <p class="text-sm text-slate-500 mt-1">
-                <?= htmlspecialchars($run['user_name'] ?? '—') ?>
-                · Durée : <strong><?= number_format(($res['duration_ms'] ?? 0) / 1000, 1) ?> s</strong>
+                <?= htmlspecialchars($run['user_name'] ?? __('common.unassigned')) ?>
+                · <?= htmlspecialchars(__('common.duration_label')) ?> <strong><?= number_format(($res['duration_ms'] ?? 0) / 1000, 1) ?> s</strong>
             </p>
         </div>
         <div class="flex gap-2 text-xs">
-            <?php foreach (['ok' => 'OK', 'skipped' => 'Ignoré', 'warning' => 'Attention', 'error' => 'Erreur'] as $k => $lbl): ?>
+            <?php foreach ($statusLabels as $k => $lbl): ?>
             <?php if (!empty($summary[$k])): ?>
-            <span class="badge badge-neutral"><?= $lbl ?> : <?= $summary[$k] ?></span>
+            <span class="badge badge-neutral"><?= htmlspecialchars($lbl) ?> : <?= $summary[$k] ?></span>
             <?php endif; ?>
             <?php endforeach; ?>
         </div>
@@ -34,7 +35,7 @@ $statusIcon = ['ok' => '✓', 'skipped' => '—', 'error' => '✗', 'warning' =>
             <div class="flex flex-wrap justify-between gap-2">
                 <p class="font-medium text-sm text-slate-800">
                     <span class="text-slate-400 mr-1"><?= $statusIcon[$st] ?? '·' ?></span>
-                    Étape <?= $i + 1 ?> — <?= htmlspecialchars($step['label'] ?? '') ?>
+                    <?= htmlspecialchars(__('common.step_label', ['n' => $i + 1, 'label' => $step['label'] ?? ''])) ?>
                 </p>
                 <span class="text-xs font-mono text-slate-400"><?= $step['duration_ms'] ?? 0 ?> ms</span>
             </div>
@@ -50,13 +51,13 @@ $statusIcon = ['ok' => '✓', 'skipped' => '—', 'error' => '✗', 'warning' =>
                     <?php if (!empty($item['category'])): ?> → <?= $item['category'] ?><?php endif; ?>
                     <?php if (!empty($item['status']) && $item['status'] !== 'ok'): ?> (<?= $item['status'] ?><?= !empty($item['reason']) ? ': '.$item['reason'] : '' ?>)<?php endif; ?>
                     <?php if (!empty($item['id']) && ($step['id'] ?? '') === 'pdfs' && ($item['status'] ?? '') === 'ok'): ?>
-                    — <a href="/declarations/<?= $item['id'] ?>/generated" target="_blank" class="text-accent hover:underline">voir</a>
+                    — <a href="/declarations/<?= $item['id'] ?>/generated" target="_blank" class="text-accent hover:underline"><?= htmlspecialchars(__('common.see_detail')) ?></a>
                     <?php endif; ?>
                 </li>
                 <?php endforeach; ?>
             </ul>
             <?php elseif (!empty($details['processed'])): ?>
-            <p class="text-xs text-slate-500 mt-1.5"><?= count($details['processed']) ?> document(s) OCR traités</p>
+            <p class="text-xs text-slate-500 mt-1.5"><?= htmlspecialchars(__('automation.ocr_processed', ['n' => count($details['processed'])])) ?></p>
             <?php elseif (!empty($details['errors'])): ?>
             <ul class="mt-2 text-xs text-red-700 space-y-0.5">
                 <?php foreach ($details['errors'] as $err): ?>

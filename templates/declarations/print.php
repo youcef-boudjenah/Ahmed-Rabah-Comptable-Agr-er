@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 $cf = $declaration['computed_fields'];
 $typeLabel = \App\Modules\Automation\DeadlineService::typeLabel($declaration['type']);
 ?><!DOCTYPE html>

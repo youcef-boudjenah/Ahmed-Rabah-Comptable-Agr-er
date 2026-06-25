@@ -1,4 +1,4 @@
-<form method="post" action="/entries/payroll" class="max-w-2xl card">
+﻿<form method="post" action="/entries/payroll" class="max-w-2xl card">
     <div class="card-body space-y-5">
     <?php
     $selectedId = $selectedClientId ?? null;
@@ -6,43 +6,43 @@
     ?>
     <div class="grid grid-cols-2 gap-4">
         <div>
-            <label class="block text-sm font-medium text-slate-700 mb-1">Année</label>
-            <input type="number" name="period_year" value="2026" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200">
+            <label class="block text-sm font-medium text-slate-700 mb-1"><?= htmlspecialchars(__('common.year')) ?></label>
+            <input type="number" name="period_year" value="<?= (int)($periodYear ?? date('Y')) ?>" required class="input w-full">
         </div>
         <div>
-            <label class="block text-sm font-medium text-slate-700 mb-1">Mois</label>
-            <input type="number" name="period_month" min="1" max="12" value="1" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200">
+            <label class="block text-sm font-medium text-slate-700 mb-1"><?= htmlspecialchars(__('common.month')) ?></label>
+            <input type="number" name="period_month" min="1" max="12" value="<?= (int)($periodMonth ?? max(1, (int)date('n')-1)) ?>" required class="input w-full">
         </div>
     </div>
     <div>
-        <label class="block text-sm font-medium text-slate-700 mb-1">Masse salariale (DA) *</label>
-        <input type="text" name="masse_salariale" required placeholder="173781.80" value="173781.80"
-               class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-lg font-mono">
-        <p class="text-xs text-slate-400 mt-1">Ex. BOUALAM MOHAMED Jan 2026 → 173 781,80 DA</p>
+        <label class="block text-sm font-medium text-slate-700 mb-1"><?= htmlspecialchars(__('entries.payroll_mass')) ?></label>
+        <input type="text" name="masse_salariale" required placeholder="Ex. 173781.80" value=""
+               class="input w-full text-lg font-mono">
+        <p class="text-xs text-slate-400 mt-1"><?= htmlspecialchars(__('entries.payroll_mass_hint')) ?></p>
     </div>
     <div class="grid grid-cols-2 gap-4">
         <div>
-            <label class="block text-sm font-medium text-slate-700 mb-1">Effectif</label>
-            <input type="number" name="effectif" value="7" class="w-full px-4 py-2.5 rounded-xl border border-slate-200">
+            <label class="block text-sm font-medium text-slate-700 mb-1"><?= htmlspecialchars(__('entries.headcount')) ?></label>
+            <input type="number" name="effectif" min="0" placeholder="0" class="input w-full">
         </div>
         <div>
-            <label class="block text-sm font-medium text-slate-700 mb-1">N° assurés (CACOBATPH)</label>
-            <input type="number" name="nombre_assurees" value="22" class="w-full px-4 py-2.5 rounded-xl border border-slate-200">
+            <label class="block text-sm font-medium text-slate-700 mb-1"><?= htmlspecialchars(__('entries.assurees')) ?></label>
+            <input type="number" name="nombre_assurees" min="0" placeholder="0" class="input w-full">
         </div>
         <div>
-            <label class="block text-sm font-medium text-slate-700 mb-1">Entrées</label>
-            <input type="number" name="entrees" value="1" class="w-full px-4 py-2.5 rounded-xl border border-slate-200">
+            <label class="block text-sm font-medium text-slate-700 mb-1"><?= htmlspecialchars(__('entries.entries')) ?></label>
+            <input type="number" name="entrees" min="0" placeholder="0" class="input w-full">
         </div>
         <div>
-            <label class="block text-sm font-medium text-slate-700 mb-1">Sorties</label>
-            <input type="number" name="sorties" value="1" class="w-full px-4 py-2.5 rounded-xl border border-slate-200">
+            <label class="block text-sm font-medium text-slate-700 mb-1"><?= htmlspecialchars(__('entries.exits')) ?></label>
+            <input type="number" name="sorties" min="0" placeholder="0" class="input w-full">
         </div>
     </div>
-    <button type="submit" class="px-6 py-3 bg-teal-600 hover:bg-teal-500 text-white rounded-xl font-medium transition w-full">
-        Enregistrer & calculer déclarations
+    <button type="submit" class="px-6 py-3 bg-accent-600 hover:bg-accent-500 text-white rounded-xl font-medium transition w-full">
+        <?= htmlspecialchars(__('entries.save_calc')) ?>
     </button>
     <a href="/entries/payroll/import" class="block text-center py-3 rounded-xl border border-slate-200 text-sm hover:bg-slate-50">
-        Import CSV multi-clients →
+        <?= htmlspecialchars(__('common.import_csv_link')) ?>
     </a>
     </div>
 </form>

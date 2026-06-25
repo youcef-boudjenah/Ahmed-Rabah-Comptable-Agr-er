@@ -8,6 +8,7 @@ use App\Core\Auth;
 use App\Core\View;
 use App\Modules\Automation\AutomationPipeline;
 use App\Modules\Automation\BatchService;
+use App\Modules\Automation\DeadlineService;
 use App\Modules\Automation\PdfGenerationService;
 use App\Modules\Declarations\DeclarationRepository;
 use App\Modules\Admin\SettingsService;
@@ -35,9 +36,23 @@ final class ProductionController
             'q' => $_GET['q'] ?? '',
         ]);
 
+        $cabinetId = Auth::cabinetId();
+        $showAutomation = isset($_GET['panel']) && $_GET['panel'] === 'automation';
+        $highlightRun = null;
+        if (isset($_GET['run'])) {
+            $highlightRun = AutomationPipeline::findRun((int) $_GET['run'], $cabinetId);
+            $showAutomation = $showAutomation || $highlightRun !== null;
+        }
+
         View::render('production/index', [
             'title' => 'Production mensuelle',
             'production' => $data,
+            'showAutomation' => $showAutomation,
+            'highlightRun' => $highlightRun,
+            'automationPreview' => AutomationPipeline::getPreview($cabinetId),
+            'automationStats' => DeadlineService::cabinetStats($cabinetId),
+            'automationRuns' => AutomationPipeline::recentRuns($cabinetId, 8),
+            'hasOpenRouter' => (require ROOT_PATH . '/config/app.php')['openrouter_api_key'] !== '',
         ]);
     }
 
@@ -53,13 +68,11 @@ final class ProductionController
             'pdfs' => true,
         ], 'production_mensuelle');
 
-        $msg = sprintf(
-            'Production %s : %d paie, %d ventes recalculées. Pipeline terminé.',
-            $_POST['period_label'] ?? '',
-            $recalc['payroll'],
-            $recalc['sales']
-        );
-        View::flash('success', $msg);
+        View::flashT('success', 'flash.production_done', [
+            'period' => $_POST['period_label'] ?? '',
+            'payroll' => $recalc['payroll'],
+            'sales' => $recalc['sales'],
+        ]);
         View::redirect('/production?' . http_build_query([
             'year' => (int) ($_POST['year'] ?? date('Y')),
             'month' => (int) ($_POST['month'] ?? date('n')),
@@ -71,7 +84,7 @@ final class ProductionController
     {
         Auth::requireAuth();
         if (!Auth::canApprove()) {
-            View::flash('error', 'Droits insuffisants pour approuver.');
+            View::flashT('error', 'flash.production_approve_denied');
             View::redirect('/production');
         }
 
@@ -90,7 +103,10 @@ final class ProductionController
             }
         }
 
-        View::flash('success', sprintf('%d brouillon(s) approuvé(s), %d ignoré(s).', $result['approved'], $result['skipped']));
+        View::flashT('success', 'flash.production_bulk_approved', [
+            'approved' => $result['approved'],
+            'skipped' => $result['skipped'],
+        ]);
         View::redirect('/production?' . http_build_query(['year' => $year, 'month' => $month, 'status' => 'approved']));
     }
 

@@ -1,11 +1,11 @@
-<?php
+﻿<?php
 return <<<'CSS'
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #111; background: #e8e8e8; padding: 12mm; }
 .form-box { background: #fff; border: 2px solid #222; padding: 10mm; max-width: 210mm; margin: 0 auto; }
 .form-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #222; padding-bottom: 8px; margin-bottom: 12px; }
 .org-block { display: flex; gap: 10px; align-items: center; }
-.org-logo { width: 48px; height: 48px; border: 2px solid #0d9488; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 9pt; color: #0d9488; text-align: center; line-height: 1.1; }
+.org-logo { width: 48px; height: 48px; border: 2px solid #c9a227; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 9pt; color: #0a1628; text-align: center; line-height: 1.1; }
 .org-logo.g50 { border-color: #1e40af; color: #1e40af; }
 .org-logo.btp { border-color: #b45309; color: #b45309; font-size: 7pt; }
 .small { font-size: 8pt; color: #444; }
@@ -26,6 +26,12 @@ body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #111; 
 .sign-block { margin-top: 20px; font-size: 9pt; }
 .sign-line { margin-top: 28px; border-top: 1px solid #999; padding-top: 6px; width: 55%; }
 .footer-meta { margin-top: 16px; font-size: 7pt; color: #666; display: flex; justify-content: space-between; border-top: 1px dashed #ccc; padding-top: 6px; }
-.btn-print { margin-bottom: 12px; padding: 8px 16px; cursor: pointer; background: #0d9488; color: #fff; border: none; border-radius: 4px; }
+.preview-banner {
+    background: #faf6eb; border: 1px solid #e8d9a8; border-radius: 4px;
+    padding: 10px 14px; margin-bottom: 12px; font-size: 9pt;
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+}
+.preview-banner strong { color: #0a1628; }
+.btn-print { margin-bottom: 12px; padding: 8px 16px; cursor: pointer; background: #c9a227; color: #0a1628; border: none; border-radius: 4px; font-weight: 600; }
 @media print { body { background: #fff; padding: 0; } .no-print { display: none !important; } .form-box { border: none; } }
 CSS;
